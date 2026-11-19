@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f59e0b">
+<title>ToDoリスト</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<style>
+:root{
+  --bg:#f4f5f7; --card:#fff; --text:#1d2129; --muted:#6b7280; --line:#e5e7eb;
+  --morning:#f59e0b; --morning-soft:#fff4dc;
+  --night:#4f46e5; --night-soft:#eceafe;
+  --holiday:#16a34a; --holiday-soft:#e3f6ea;
+  --extra:#db2777; --extra-soft:#fde7f1;
+  --danger:#dc2626;
+  --accent:var(--morning); --accent-soft:var(--morning-soft);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#121417; --card:#1c1f24; --text:#e8eaed; --muted:#9aa1ad; --line:#2c3038;
+    --morning:#fbbf24; --morning-soft:#3a2d12;
+    --night:#818cf8; --night-soft:#23224a;
+    --holiday:#4ade80; --holiday-soft:#16301f;
+    --extra:#f472b6; --extra-soft:#3a1a2b;
+    --danger:#f87171;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;-webkit-tap-highlight-color:transparent}
+body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
+.wrap{max-width:640px;margin:0 auto;padding:0 12px}
+button{font:inherit;color:inherit;cursor:pointer}
+input,select{font:inherit;color:inherit}
+[hidden]{display:none!important}
+
+header.top{padding:calc(12px + env(safe-area-inset-top)) 0 4px}
+.title-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+h1{font-size:20px;margin:0}
+.icon-btn{border:none;background:transparent;font-size:22px;padding:6px 8px;border-radius:10px;color:var(--muted)}
+.today{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px;font-size:14px;color:var(--muted)}
+.today b{color:var(--text);font-size:16px}
+.pill{display:inline-block;padding:3px 10px;border-radius:999px;color:#fff;font-weight:700;font-size:12px}
+.hol-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:100%;margin-top:10px;border:2px solid var(--holiday);background:var(--card);color:var(--holiday);
+  border-radius:12px;padding:10px;font-weight:700;font-size:15px}
+.hol-btn.on{background:var(--holiday);color:#fff}
+.hol-btn small{font-weight:500;opacity:.85;font-size:12px}
+
+.sticky{position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.tab{position:relative;border:2px solid var(--line);background:var(--card);border-radius:12px;padding:8px 2px;font-weight:700;font-size:15px}
+.tab small{display:block;font-weight:500;font-size:11px;color:var(--muted)}
+.tab.morning{--t:var(--morning);--ts:var(--morning-soft)}
+.tab.night{--t:var(--night);--ts:var(--night-soft)}
+.tab.holiday{--t:var(--holiday);--ts:var(--holiday-soft)}
+.tab.extra{--t:var(--extra);--ts:var(--extra-soft)}
+.tab.current{background:var(--t);border-color:var(--t);color:#fff}
+.tab.current small{color:rgba(255,255,255,.9)}
+.tab.selected{outline:3px solid var(--t);outline-offset:2px}
+.tab:not(.current).selected{background:var(--ts);border-color:var(--t)}
+.badge{position:absolute;top:-8px;right:-4px;background:#fff;color:var(--t);border:2px solid var(--t);border-radius:999px;font-size:10px;padding:0 6px;line-height:16px}
+.add-row{display:flex;gap:6px;margin-top:8px}
+.add-row input{flex:1;min-width:0;border:1.5px solid var(--line);background:var(--card);border-radius:12px;padding:11px 12px;font-size:16px}
+.add-row input:focus{outline:none;border-color:var(--accent)}
+.add-row button{border:none;background:var(--accent);color:#fff;border-radius:12px;padding:0 16px;font-weight:700}
+
+.progress{display:flex;align-items:center;gap:10px;margin:6px 2px 10px;font-size:13px;color:var(--muted)}
+.bar{flex:1;height:8px;background:var(--line);border-radius:999px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:999px;transition:width .3s}
+.list-tools{display:flex;justify-content:flex-end;gap:4px;margin:-4px 0 6px}
+.text-btn{border:none;background:transparent;color:var(--accent);font-size:13px;padding:6px 8px;border-radius:8px;font-weight:700}
+ul.items{list-style:none;margin:0;padding:0;background:var(--card);border-radius:14px;overflow:hidden;border-left:4px solid var(--accent)}
+.item{display:flex;align-items:center;border-bottom:1px solid var(--line);transition:opacity .25s, transform .25s}
+.item:last-child{border-bottom:none}
+.item label{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:12px;min-height:52px;font-size:16px}
+.item label span{overflow-wrap:anywhere}
+.item input[type=checkbox]{width:24px;height:24px;margin:0;accent-color:var(--accent);flex:none}
+.item .edit{border:none;background:transparent;color:var(--muted);padding:12px 14px;font-size:18px}
+.item .mv{border:none;background:transparent;color:var(--muted);padding:10px 8px;font-size:15px}
+.item.leaving{opacity:0;transform:translateX(30px)}
+.item.done label span{text-decoration:line-through;color:var(--muted)}
+.item time{font-size:11px;color:var(--muted);margin-left:auto;padding-left:6px;white-space:nowrap}
+.all-done{text-align:center;padding:26px 10px;color:var(--muted);font-size:14px;background:var(--card);border-radius:14px}
+.all-done b{display:block;font-size:20px;color:var(--accent);margin-bottom:4px}
+details.done-box{margin-top:16px}
+details.done-box summary{font-weight:700;font-size:14px;padding:8px 2px;color:var(--muted);cursor:pointer}
+.done-actions{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px}
+.btn{border:1.5px solid var(--accent);background:var(--card);color:var(--accent);border-radius:10px;padding:9px 12px;font-weight:700;font-size:14px}
+.btn.danger{border-color:var(--danger);color:var(--danger)}
+.btn.fill{background:var(--accent);color:#fff}
+.btn.ghost{border-color:var(--line);color:var(--muted)}
+ul.items.done-items{border-left-color:var(--line)}
+
+dialog{border:none;border-radius:16px;padding:0;background:var(--card);color:var(--text);width:min(92vw,420px);max-height:90vh;overflow:auto}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.dlg{padding:16px}
+.dlg h2{font-size:17px;margin:0 0 12px}
+.dlg label.f{display:block;font-size:13px;color:var(--muted);margin:14px 0 6px}
+.dlg input[type=text],.dlg input[type=date]{width:100%;border:1.5px solid var(--line);background:var(--bg);border-radius:10px;padding:10px;font-size:16px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{border:1.5px solid var(--line);background:var(--bg);border-radius:999px;padding:7px 12px;font-size:14px}
+.seg button.on{background:var(--cc,var(--accent));border-color:var(--cc,var(--accent));color:#fff}
+.chk{display:flex;align-items:center;gap:8px;font-size:15px;padding:6px 0}
+.chk input{width:20px;height:20px;accent-color:var(--holiday)}
+.dlg-foot{display:flex;justify-content:space-between;gap:8px;margin-top:18px}
+.dlg-foot .r{display:flex;gap:8px;margin-left:auto}
+.note{font-size:12px;color:var(--muted);margin:6px 0 0;line-height:1.6}
+.plan-list{list-style:none;margin:6px 0 0;padding:0}
+.plan-list li{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}
+.plan-list button{border:none;background:transparent;color:var(--danger);font-weight:700}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#222;color:#fff;border-radius:12px;padding:10px 14px;font-size:14px;
+  display:flex;gap:12px;align-items:center;z-index:50;max-width:92vw;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.toast button{border:none;background:transparent;color:#8fb4ff;font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="title-row">
+      <h1>ToDoリスト</h1>
+      <button id="btnSettings" class="icon-btn" aria-label="設定">⚙</button>
+    </div>
+    <div id="today" class="today"></div>
+    <button id="holBtn" class="hol-btn"></button>
+  </header>
+
+  <div class="sticky">
+    <nav class="tabs" id="tabs"></nav>
+    <form id="addForm" class="add-row">
+      <input id="addInput" placeholder="やることを入力（「、」で複数まとめて追加）" autocomplete="off" enterkeyhint="done">
+      <button>追加</button>
+    </form>
+  </div>
+
+  <main id="listArea"></main>
+</div>
+
+<dialog id="editDlg">
+  <form class="dlg" id="editForm">
+    <h2>ToDoを編集</h2>
+    <label class="f" for="editText">内容</label>
+    <input type="text" id="editText" autocomplete="off">
+    <label class="f">タブを移動</label>
+    <div class="seg" id="editMove"></div>
+    <label class="f">ほかのタブにもコピー</label>
+    <div class="seg" id="editCopy"></div>
+    <div class="dlg-foot">
+      <button type="button" class="btn danger" id="editDelete">削除</button>
+      <span class="r">
+        <button type="button" class="btn ghost" id="editCancel">キャンセル</button>
+        <button type="submit" class="btn fill">保存</button>
+      </span>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="settingsDlg">
+  <div class="dlg">
+    <h2>設定</h2>
+    <label class="f">休日にする日</label>
+    <label class="chk"><input type="checkbox" id="sSat">土曜日</label>
+    <label class="chk"><input type="checkbox" id="sSun">日曜日</label>
+    <label class="chk"><input type="checkbox" id="sHol">祝日（振替休日をふくむ）</label>
+    <label class="chk"><input type="checkbox" id="sNY">年末年始（12/29〜1/3）</label>
+    <label class="f">有休・おやすみの予定</label>
+    <div class="add-row" style="margin-top:0">
+      <input type="date" id="planDate">
+      <button type="button" id="planAdd">登録</button>
+    </div>
+    <ul class="plan-list" id="planList"></ul>
+    <p class="note">登録した日は自動で休日になります。当日の「休日」ボタンでも切り替えられます。</p>
+    <label class="f">毎日のリセット</label>
+    <label class="chk"><input type="checkbox" id="sReset">毎朝4:00に「朝・夜・休日」のチェックを自動で外す</label>
+    <p class="note">「突発」のチェックは自動では外れません。</p>
+    <label class="f">バックアップ</label>
+    <div class="seg">
+      <button type="button" id="btnExport">書き出し（保存）</button>
+      <button type="button" id="btnImport">読み込み（復元）</button>
+      <input type="file" id="importFile" accept="application/json,.json" hidden>
+    </div>
+    <p class="note">データはこのスマホの中にだけ保存されます。</p>
+    <div class="dlg-foot"><span></span><button type="button" class="btn fill" id="settingsClose">閉じる</button></div>
+  </div>
+</dialog>
+
+<div id="toast" class="toast" hidden><span id="toastMsg"></span><button id="toastBtn" hidden>元に戻す</button></div>
+
+<script>
+'use strict';
+/* ========== 定数 ========== */
+const STORE_KEY = 'todo-list-v1';
+const TABS = [
+  {id:'morning', name:'朝',   cls:'morning', c:'--morning', s:'--morning-soft'},
+  {id:'night',   name:'夜',   cls:'night',   c:'--night',   s:'--night-soft'},
+  {id:'holiday', name:'休日', cls:'holiday', c:'--holiday', s:'--holiday-soft'},
+  {id:'extra',   name:'突発', cls:'extra',   c:'--extra',   s:'--extra-soft'},
+];
+const ROUTINE = ['morning', 'night', 'holiday'];
+const DAY = ['日','月','火','水','木','金','土'];
+const DAY_START_HOUR = 4;   // 4:00で日付が変わる
+const MORNING_END_HOUR = 12;
+
+/* ========== ユーティリティ ========== */
+const $ = s => document.querySelector(s);
+function el(tag, attrs={}, ...kids){
+  const e = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs)){
+    if (v == null || v === false) continue;
+    if (k === 'class') e.className = v;
+    else if (k === 'style') e.style.cssText = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (k === 'checked' || k === 'disabled') e[k] = !!v;
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of kids.flat()) if (c != null && c !== false) e.append(c instanceof Node ? c : document.createTextNode(c));
+  return e;
+}
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const parseYmd = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const hm = ts => { const d = new Date(ts); return `${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`; };
+/* 4:00までは前の日あつかい */
+function logicalDay(now = new Date()){
+  const d = new Date(now.getTime() - DAY_START_HOUR * 3600e3);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+/* ========== 日本の祝日（計算で判定・ネット不要） ========== */
+function baseHoliday(d){
+  const y = d.getFullYear(), m = d.getMonth() + 1, day = d.getDate(), w = d.getDay();
+  const nthMon = n => w === 1 && Math.floor((day - 1) / 7) + 1 === n;
+  const q = Math.floor((y - 1980) / 4);
+  const spring = Math.floor(20.8431 + 0.242194 * (y - 1980) - q);
+  const autumn = Math.floor(23.2488 + 0.242194 * (y - 1980) - q);
+  if (m === 1 && day === 1) return '元日';
+  if (m === 1 && nthMon(2)) return '成人の日';
+  if (m === 2 && day === 11) return '建国記念の日';
+  if (m === 2 && day === 23) return '天皇誕生日';
+  if (m === 3 && day === spring) return '春分の日';
+  if (m === 4 && day === 29) return '昭和の日';
+  if (m === 5 && day === 3) return '憲法記念日';
+  if (m === 5 && day === 4) return 'みどりの日';
+  if (m === 5 && day === 5) return 'こどもの日';
+  if (m === 7 && nthMon(3)) return '海の日';
+  if (m === 8 && day === 11) return '山の日';
+  if (m === 9 && nthMon(3)) return '敬老の日';
+  if (m === 9 && day === autumn) return '秋分の日';
+  if (m === 10 && nthMon(2)) return 'スポーツの日';
+  if (m === 11 && day === 3) return '文化の日';
+  if (m === 11 && day === 23) return '勤労感謝の日';
+  return null;
+}
+function jpHoliday(d){
+  const b = baseHoliday(d);
+  if (b) return b;
+  if (d.getDay() !== 0){
+    const t = new Date(d); t.setDate(t.getDate() - 1);
+    while (baseHoliday(t)){ if (t.getDay() === 0) return '振替休日'; t.setDate(t.getDate() - 1); }
+  }
+  const p = new Date(d), n = new Date(d); p.setDate(p.getDate() - 1); n.setDate(n.getDate() + 1);
+  if (d.getDay() !== 0 && baseHoliday(p) && baseHoliday(n)) return '国民の休日';
+  return null;
+}
+
+/* ========== 状態 ========== */
+function defaultState(){
+  return {
+    version: 1,
+    lists: {morning: [], night: [], holiday: [], extra: []},
+    settings: {sat: true, sun: true, hol: true, newYear: false, autoReset: true},
+    overrides: {},          // {'YYYY-MM-DD': true(休日) / false(出勤日)}
+    lastDay: ymd(logicalDay()),
+  };
+}
+function load(){
+  try{
+    const s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+    if (s && s.lists){
+      const d = defaultState();
+      return {...d, ...s, lists: {...d.lists, ...s.lists}, settings: {...d.settings, ...s.settings}, overrides: s.overrides || {}};
+    }
+  }catch(e){}
+  return defaultState();
+}
+let state = load();
+function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){ toast('保存できませんでした'); } }
+
+/* 自然な休日かどうか（ボタンで変える前） */
+function naturalHoliday(d){
+  const st = state.settings, w = d.getDay(), m = d.getMonth() + 1, day = d.getDate();
+  const hol = jpHoliday(d);
+  if (st.hol && hol) return hol;
+  if (st.sun && w === 0) return '日曜日';
+  if (st.sat && w === 6) return '土曜日';
+  if (st.newYear && ((m === 12 && day >= 29) || (m === 1 && day <= 3))) return '年末年始';
+  return null;
+}
+function dayInfo(d = logicalDay()){
+  const key = ymd(d), nat = naturalHoliday(d), ov = state.overrides[key];
+  if (ov === true && !nat) return {holiday: true, reason: '有休・おやすみ', override: true, natural: false};
+  if (ov === false && nat) return {holiday: false, reason: '出勤日（' + nat + '）', override: true, natural: true};
+  return {holiday: !!nat, reason: nat || '平日', override: false, natural: !!nat};
+}
+function currentTab(now = new Date()){
+  if (dayInfo(logicalDay(now)).holiday) return 'holiday';
+  const h = now.getHours();
+  return (h >= DAY_START_HOUR && h < MORNING_END_HOUR) ? 'morning' : 'night';
+}
+let selected = currentTab();
+let lastCurrent = selected;
+let reorder = false;
+const doneOpen = {};
+
+/* ========== 毎日のリセット ========== */
+function dailyReset(){
+  const today = ymd(logicalDay());
+  if (state.lastDay === today) return false;
+  state.lastDay = today;
+  // 過ぎた日の上書き設定は消す
+  for (const k of Object.keys(state.overrides)) if (k < today) delete state.overrides[k];
+  let n = 0;
+  if (state.settings.autoReset)
+    for (const t of ROUTINE) for (const it of state.lists[t]) if (it.done){ it.done = false; it.doneAt = null; n++; }
+  save();
+  if (n) toast('新しい日になったので、チェックを外しました');
+  return true;
+}
+
+/* ========== 描画 ========== */
+function setAccent(id){
+  const T = TABS.find(t => t.id === id);
+  const r = document.documentElement.style;
+  r.setProperty('--accent', `var(${T.c})`); r.setProperty('--accent-soft', `var(${T.s})`);
+  const c = getComputedStyle(document.documentElement).getPropertyValue(T.c).trim();
+  $('meta[name=theme-color]').setAttribute('content', c || '#f59e0b');
+}
+function renderHeader(){
+  const now = new Date(), d = logicalDay(now), info = dayInfo(d), cur = currentTab(now);
+  const T = TABS.find(t => t.id === cur);
+  const timeLbl = info.holiday ? '休日' : (cur === 'morning' ? '朝' : '夜');
+  $('#today').replaceChildren(
+    el('b', {}, `${d.getMonth()+1}月${d.getDate()}日（${DAY[d.getDay()]}）`),
+    el('span', {class:'pill', style:`background:var(${T.c})`}, `いまは${timeLbl}`),
+    el('span', {}, info.reason));
+  const b = $('#holBtn');
+  b.classList.toggle('on', info.holiday);
+  let label, sub;
+  if (!info.override && !info.natural){ label = '今日を休日にする'; sub = '有休など'; }
+  else if (info.override && info.holiday){ label = '休日を取り消す'; sub = 'もとの平日に戻す'; }
+  else if (!info.override && info.natural){ label = '今日は出勤日にする'; sub = '休日出勤など'; }
+  else { label = '出勤日を取り消す'; sub = 'もとの休日に戻す'; }
+  b.replaceChildren(el('span', {}, `休日ボタン：${label}`), el('small', {}, `いまは${info.holiday ? '休日' : '平日'}モード（${sub}）`));
+}
+function renderTabs(){
+  const cur = currentTab();
+  $('#tabs').replaceChildren(...TABS.map(T => {
+    const n = state.lists[T.id].filter(i => !i.done).length;
+    const isCur = T.id === cur;
+    return el('button', {class: `tab ${T.cls}${isCur ? ' current' : ''}${T.id === selected ? ' selected' : ''}`,
+      onclick: () => { selected = T.id; reorder = false; render(); }},
+      isCur ? el('span', {class:'badge'}, 'いま') : null, T.name, el('small', {}, `のこり ${n}`));
+  }));
+}
+function itemRow(tab, it, idx, len){
+  const li = el('li', {class: 'item' + (it.done ? ' done' : '')});
+  const cb = el('input', {type:'checkbox', checked: it.done, onchange: () => {
+    li.classList.add('leaving');
+    setTimeout(() => {
+      it.done = cb.checked; it.doneAt = it.done ? Date.now() : null;
+      save(); render();
+      const rest = state.lists[tab].filter(i => !i.done).length;
+      if (it.done && rest === 0 && state.lists[tab].length > 1) toast('ぜんぶ終わりました。おつかれさま！');
+    }, 220);
+  }});
+  li.append(el('label', {}, cb, el('span', {}, it.text), it.done && it.doneAt ? el('time', {}, hm(it.doneAt)) : null));
+  if (reorder && !it.done){
+    li.append(
+      el('button', {class:'mv', 'aria-label':'上へ', disabled: idx === 0, onclick: () => move(tab, it, -1)}, '▲'),
+      el('button', {class:'mv', 'aria-label':'下へ', disabled: idx === len - 1, onclick: () => move(tab, it, 1)}, '▼'));
+  } else {
+    li.append(el('button', {class:'edit', 'aria-label':'編集', onclick: () => openEdit(tab, it.id)}, '✎'));
+  }
+  return li;
+}
+function move(tab, it, dir){
+  const list = state.lists[tab];
+  const active = list.filter(i => !i.done);
+  const k = active.indexOf(it), other = active[k + dir];
+  if (!other) return;
+  const a = list.indexOf(it), b = list.indexOf(other);
+  [list[a], list[b]] = [list[b], list[a]];
+  save(); render();
+}
+function renderList(){
+  const tab = selected, list = state.lists[tab];
+  const active = list.filter(i => !i.done), done = list.filter(i => i.done);
+  const area = $('#listArea');
+  area.replaceChildren();
+  if (list.length){
+    const pct = Math.round(done.length / list.length * 100);
+    area.append(el('div', {class:'progress'}, el('span', {}, `${done.length} / ${list.length} 完了`), el('div', {class:'bar'}, el('i', {style:`width:${pct}%`}))));
+  }
+  if (active.length){
+    if (active.length > 1) area.append(el('div', {class:'list-tools'},
+      el('button', {class:'text-btn', onclick: () => { reorder = !reorder; render(); }}, reorder ? '並べかえ終了' : '並べかえ')));
+    area.append(el('ul', {class:'items'}, active.map((it, i) => itemRow(tab, it, i, active.length))));
+  } else {
+    area.append(el('div', {class:'all-done'},
+      list.length ? [el('b', {}, 'ぜんぶ終わりました'), 'おつかれさまでした！'] : '上の入力欄から やることを追加してください'));
+  }
+  if (done.length){
+    area.append(el('details', {class:'done-box', open: doneOpen[tab] ? true : null, ontoggle: e => doneOpen[tab] = e.target.open},
+      el('summary', {}, `Done（${done.length}）`),
+      el('div', {class:'done-actions'},
+        el('button', {class:'btn', onclick: () => {
+          const before = done.map(i => i.id);
+          state.lists[tab].forEach(i => { i.done = false; i.doneAt = null; }); save(); render();
+          toast('チェックをすべて外しました', () => { state.lists[tab].forEach(i => { if (before.includes(i.id)){ i.done = true; i.doneAt = Date.now(); } }); save(); render(); });
+        }}, 'すべてチェックを外す'),
+        tab === 'extra' ? el('button', {class:'btn danger', onclick: () => {
+          const removed = state.lists.extra.filter(i => i.done);
+          const keep = state.lists.extra.filter(i => !i.done);
+          const backup = [...state.lists.extra];
+          state.lists.extra = keep; save(); render();
+          toast(`チェック済み ${removed.length}件を削除しました`, () => { state.lists.extra = backup; save(); render(); });
+        }}, 'チェック済みを削除') : null),
+      el('ul', {class:'items done-items'}, done.map(it => itemRow(tab, it, 0, 0)))));
+  }
+}
+function render(){
+  setAccent(selected);
+  renderHeader();
+  renderTabs();
+  renderList();
+}
+
+/* ========== 追加 ========== */
+$('#addForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const input = $('#addInput');
+  const texts = input.value.split(/[、,，\n]+/).map(s => s.trim()).filter(Boolean);
+  if (!texts.length) return;
+  const list = state.lists[selected];
+  let added = 0;
+  for (const text of texts){
+    const ex = list.find(i => i.text === text);
+    if (ex){ if (ex.done){ ex.done = false; ex.doneAt = null; } continue; }
+    list.push({id: uid(), text, done: false, doneAt: null}); added++;
+  }
+  input.value = '';
+  save(); render();
+  const T = TABS.find(t => t.id === selected);
+  toast(added ? `「${T.name}」に ${added}件 追加しました` : 'すでにあります');
+});
+
+/* ========== 休日ボタン ========== */
+$('#holBtn').addEventListener('click', () => {
+  const d = logicalDay(), key = ymd(d), info = dayInfo(d);
+  if (info.override) delete state.overrides[key];          // もう一度押したら元に戻す
+  else state.overrides[key] = !info.natural;
+  save();
+  const now = dayInfo(d);
+  selected = currentTab(); lastCurrent = selected;
+  render();
+  toast(now.holiday ? '今日は休日モードです' : '今日は平日モードです');
+});
+
+/* ========== 編集 ========== */
+let editing = null;
+function openEdit(tab, id){
+  const it = state.lists[tab].find(i => i.id === id);
+  if (!it) return;
+  editing = {tab, id, target: tab, copies: new Set()};
+  $('#editText').value = it.text;
+  drawEditSeg();
+  $('#editDlg').showModal();
+}
+function drawEditSeg(){
+  $('#editMove').replaceChildren(...TABS.map(T => el('button', {type:'button', class: editing.target === T.id ? 'on' : '', style:`--cc:var(${T.c})`,
+    onclick: () => { editing.target = T.id; editing.copies.delete(T.id); drawEditSeg(); }}, T.name)));
+  $('#editCopy').replaceChildren(...TABS.filter(T => T.id !== editing.target).map(T => el('button', {type:'button', class: editing.copies.has(T.id) ? 'on' : '', style:`--cc:var(${T.c})`,
+    onclick: () => { editing.copies.has(T.id) ? editing.copies.delete(T.id) : editing.copies.add(T.id); drawEditSeg(); }}, T.name)));
+}
+$('#editForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const {tab, id, target, copies} = editing;
+  const list = state.lists[tab], it = list.find(i => i.id === id);
+  const text = $('#editText').value.trim();
+  if (it && text){
+    it.text = text;
+    if (target !== tab){ list.splice(list.indexOf(it), 1); state.lists[target].push(it); }
+    for (const c of copies) if (!state.lists[c].some(i => i.text === text)) state.lists[c].push({id: uid(), text, done: false, doneAt: null});
+    save(); render();
+    if (copies.size) toast(`${[...copies].map(c => TABS.find(t => t.id === c).name).join('・')}にもコピーしました`);
+  }
+  $('#editDlg').close();
+});
+$('#editCancel').addEventListener('click', () => $('#editDlg').close());
+$('#editDelete').addEventListener('click', () => {
+  const {tab, id} = editing, list = state.lists[tab];
+  const idx = list.findIndex(i => i.id === id);
+  if (idx < 0) return;
+  const [it] = list.splice(idx, 1);
+  save(); render(); $('#editDlg').close();
+  toast(`「${it.text}」を削除しました`, () => { state.lists[tab].splice(idx, 0, it); save(); render(); });
+});
+
+/* ========== 設定 ========== */
+const SET_MAP = {sSat:'sat', sSun:'sun', sHol:'hol', sNY:'newYear', sReset:'autoReset'};
+$('#btnSettings').addEventListener('click', () => {
+  for (const [id, k] of Object.entries(SET_MAP)) $('#' + id).checked = !!state.settings[k];
+  $('#planDate').value = '';
+  drawPlans();
+  $('#settingsDlg').showModal();
+});
+for (const [id, k] of Object.entries(SET_MAP))
+  $('#' + id).addEventListener('change', e => { state.settings[k] = e.target.checked; save(); selected = currentTab(); lastCurrent = selected; render(); });
+function drawPlans(){
+  const today = ymd(logicalDay());
+  const plans = Object.entries(state.overrides).filter(([k, v]) => v === true && k >= today).map(([k]) => k).sort();
+  $('#planList').replaceChildren(...(plans.length ? plans.map(k => {
+    const d = parseYmd(k);
+    return el('li', {}, `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}（${DAY[d.getDay()]}）`,
+      el('button', {type:'button', onclick: () => { delete state.overrides[k]; save(); drawPlans(); render(); }}, '取り消す'));
+  }) : [el('li', {style:'color:var(--muted)'}, '登録はありません')]));
+}
+$('#planAdd').addEventListener('click', () => {
+  const v = $('#planDate').value;
+  if (!v) return;
+  if (v < ymd(logicalDay())){ toast('過去の日は登録できません'); return; }
+  if (naturalHoliday(parseYmd(v))){ toast('その日はもともと休日です'); return; }
+  state.overrides[v] = true; save(); drawPlans(); render();
+  $('#planDate').value = '';
+});
+$('#settingsClose').addEventListener('click', () => $('#settingsDlg').close());
+$('#btnExport').addEventListener('click', () => {
+  const url = URL.createObjectURL(new Blob([JSON.stringify(state, null, 2)], {type:'application/json'}));
+  const a = el('a', {href: url, download: `todo-backup-${ymd(new Date())}.json`});
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+});
+$('#btnImport').addEventListener('click', () => $('#importFile').click());
+$('#importFile').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  try{
+    const s = JSON.parse(await f.text());
+    if (!s || !s.lists || !s.lists.morning) throw 0;
+    if (!confirm('今のデータを、バックアップの内容で置き換えますか？')) return;
+    localStorage.setItem(STORE_KEY, JSON.stringify(s));
+    state = load(); save();
+    selected = currentTab(); render(); $('#settingsDlg').close();
+    toast('バックアップを読み込みました');
+  }catch(err){ toast('読み込めませんでした'); }
+});
+
+/* ========== トースト ========== */
+let toastTimer;
+function toast(msg, undo){
+  $('#toastMsg').textContent = msg;
+  const b = $('#toastBtn');
+  b.hidden = !undo;
+  b.onclick = () => { undo && undo(); $('#toast').hidden = true; };
+  $('#toast').hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $('#toast').hidden = true, undo ? 5000 : 2200);
+}
+
+/* ========== 時間の変化を見る ========== */
+function tick(){
+  const changedDay = dailyReset();
+  const cur = currentTab();
+  if (cur !== lastCurrent || changedDay){
+    if (selected === lastCurrent) selected = cur;   // 「いま」のタブを見ていたら自動で切りかえ
+    lastCurrent = cur;
+  }
+  render();
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
+setInterval(tick, 30 * 1000);
+
+/* ========== 起動 ========== */
+dailyReset();
+selected = currentTab(); lastCurrent = selected;
+render();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+</script>
+</body>
+</html>
